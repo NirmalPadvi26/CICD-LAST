@@ -3,9 +3,8 @@ name: Auto-Merge Testing to Production
 on:
   push:
     branches:
-      - testing  # Triggers when changes are pushed to the testing branch
-
-  workflow_dispatch:  # Allows manual triggering from GitHub Actions
+      - testing  # Trigger when changes are pushed to the testing branch
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   merge-to-production:
@@ -15,19 +14,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensures full history is available
+          fetch-depth: 0  # Ensure full history is available
 
       - name: Configure Git
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions Bot"
 
+      - name: Fetch all branches
+        run: git fetch --all  # Ensure the testing branch is available
+
       - name: Merge Testing into Production
         run: |
           git checkout production
-          git merge testing --no-edit
-
-      - name: Push changes with PAT
-        run: |
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/NirmalPadvi26/CICD-LAST.git
+          git merge origin/testing --no-edit  # Use 'origin/testing' explicitly
           git push origin production
