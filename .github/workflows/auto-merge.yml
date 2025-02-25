@@ -1,0 +1,29 @@
+name: Auto-Merge Testing to Production
+
+on:
+  push:
+    branches:
+      - testing  # Triggers when changes are pushed to the testing branch
+
+  workflow_dispatch:  # Allows manual triggering from GitHub Actions
+
+jobs:
+  merge-to-production:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures full history is available
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "Nirmalp2632@gmail.com"
+          git config --global user.name "GitHub Actions Bot"
+
+      - name: Merge Testing into Production
+        run: |
+          git checkout production
+          git merge testing --no-edit
+          git push origin production
