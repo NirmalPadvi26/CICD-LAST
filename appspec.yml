@@ -8,10 +8,9 @@ files:
 
 permissions:
   - object: /home/ec2-user/app/scripts/start.sh
-    pattern: "*.sh"
+    mode: 755
     owner: ec2-user
     group: ec2-user
-    mode: 755
 
 hooks:
   ApplicationStart:
