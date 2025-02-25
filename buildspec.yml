@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - apt-get update -y
+      - apt-get install -y git
+  pre_build:
+    commands:
+      - git config --global user.email "github-actions@github.com"
+      - git config --global user.name "GitHub Actions"
+      - git fetch origin
+  build:
+    commands:
+      - git checkout main
+      - git merge origin/dev --no-edit
+      - git push origin main
+artifacts:
+  files: []
