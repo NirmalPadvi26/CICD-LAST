@@ -1,24 +1,16 @@
 #!/bin/bash
 
-# Go to the deployment directory
-cd /home/ec2-user/app || exit
+cd /home/ec2-user/app
 
-# Ensure proper permissions
+# Fix ownership & permissions
 sudo chown -R ec2-user:ec2-user /home/ec2-user/app
 sudo chmod -R 755 /home/ec2-user/app
 
-# Install dependencies with proper permissions
-sudo npm install --unsafe-perm=true --allow-root
+# Install dependencies
+npm install
 
-# Ensure PM2 is installed globally
-if ! command -v pm2 &> /dev/null
-then
-    echo "PM2 not found. Installing PM2..."
-    sudo npm install -g pm2
-fi
+# Stop any running process
+/usr/bin/pm2 stop all || true
 
-# Stop any running PM2 processes and start the app
-pm2 stop all || true
-pm2 start server.js
-pm2 save
-pm2 startup
+# Start the server with PM2
+/usr/bin/pm2 start server.js
