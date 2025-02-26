@@ -29,22 +29,34 @@ This project sets up a complete **CI/CD pipeline** for a **Node.js application a
 ## **Setup & Configuration**
 
 ### **Step 1: Create EC2 Instances**
-1. **Launch Two Amazon Linux 2 EC2 Instances (Free Tier).**
-2. **Configure Security Group:**
+1. **Launch Two Amazon Linux 2023 EC2 Instances (Free Tier).**
+2. **Instance Configuration:**
+   - **AMI:** Amazon Linux 2023 (64-bit x86)
+   - **Instance Type:** `t2.micro`
+   - **Key Pair:** Create a new key pair **“test&prod.pem”**.
+   - **VPC:** Default VPC
+   - **Storage:** EBS 10 GiB General Purpose SSD (gp3)
+
+3. **Configure Security Group:**
    - **Inbound Rules:**
-     - HTTP (80), HTTPS (443), TCP (3000, 8080)
+     - HTTP (80) → Anywhere (0.0.0.0/0, ::/0)
+     - HTTPS (443) → Anywhere (0.0.0.0/0, ::/0)
+     - TCP (3000, 8080) → Anywhere (0.0.0.0/0, ::/0)
+     - SSH (22) → Anywhere (0.0.0.0/0, ::/0)
    - **Outbound Rules:**
-     - Allow all traffic.
-3. **Install Dependencies on EC2:**
+     - Allow all traffic (0.0.0.0/0, ::/0).
+
+4. **Install Dependencies on EC2:**
    ```bash
    sudo yum update -y
    sudo yum install -y git unzip nodejs npm aws-cli
    ```
-4. **Install CodeDeploy Agent:**
+
+5. **Install CodeDeploy Agent:**
    ```bash
    sudo yum install ruby -y
    cd /home/ec2-user
-   wget https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
+   wget https://aws-codedeploy-ap-south-1.s3.amazonaws.com/latest/install
    chmod +x ./install
    sudo ./install auto
    sudo systemctl enable codedeploy-agent
@@ -66,8 +78,10 @@ This project sets up a complete **CI/CD pipeline** for a **Node.js application a
    - **Value:** (Paste Token)
 
 ### **Step 4: Create S3 for Artifacts**
-1. **Create an S3 Bucket** (for storing deployment artifacts).
-2. **Update permissions** to allow CodeDeploy access.
+1. **Go to AWS S3 Console** and create a new S3 bucket.
+2. **Enable public access block** (recommended).
+3. **Add a bucket policy** to allow access from AWS CodeDeploy.
+4. **Update permissions** to allow CodeDeploy to access the bucket.
 
 ### **Step 5: Create IAM Roles**
 1. **IAM Role for EC2:**
@@ -77,18 +91,50 @@ This project sets up a complete **CI/CD pipeline** for a **Node.js application a
 
 ### **Step 6: Setup CodeDeploy**
 1. **Create a CodeDeploy Application:**
-   - Name: `MyApp`
-   - Compute Platform: `EC2/On-Premises`
+   - Open the AWS CodeDeploy console.
+   - Click **Create application**.
+   - **Application Name:** `CICD-DEPLOY-MULTI`
+   - **Compute Platform:** `EC2/On-Premises`
+   - Click **Create application**.
+
 2. **Create Deployment Groups:**
-   - **Testing:** Uses EC2 testing instance.
-   - **Production:** Uses EC2 production instance.
+   - **Testing Deployment Group:**
+     - Click **Create deployment group**.
+     - **Deployment Group Name:** `Testing`
+     - **Application Name:** `CICD-DEPLOY-MULTI`
+     - **IAM Role:** `CodeDeployCustomRole`
+     - **Deployment Type:** `In-Place Deployment`
+     - **EC2 Instance:** Select **Testing EC2 Instance**
+     - Click **Create deployment group**.
+   
+   - **Production Deployment Group:**
+     - **Deployment Group Name:** `Production`
+     - **EC2 Instance:** Select **Production EC2 Instance**
+     - **Deployment Config:** `CodeDeployDefault.OneAtATime`
+     - Click **Create deployment group**.
 
 ### **Step 7: Configure CodePipeline**
-1. **Pipeline Stages:**
-   - **Source:** Fetches code from GitHub.
-   - **Deploy to Testing:** Deploys to `testing`.
-   - **Manual Approval:** Requires approval before production.
-   - **Deploy to Production:** Deploys to `production`.
+1. **Create a Custom CodePipeline:**
+   - **Pipeline Name:** `Multi-Branch-Pipeline`
+   - **Service Role:** `AWSCodePipelineServiceRole`
+   - **S3 Bucket for Artifacts:** Select the previously created bucket.
+   - **Add Stages:**
+     1. **Source Stage:**
+        - **Source Provider:** GitHub
+        - **Repository:** Your project repository
+        - **Branch:** `main`
+        - **Output Artifact:** `SourceArtifact`
+     2. **Deploy to Testing:**
+        - **Provider:** AWS CodeDeploy
+        - **Application Name:** `CICD-DEPLOY-MULTI`
+        - **Deployment Group:** `Testing`
+     3. **Manual Approval:**
+        - **Approval Action:** Requires manual confirmation before production.
+     4. **Deploy to Production:**
+        - **Provider:** AWS CodeDeploy
+        - **Application Name:** `CICD-DEPLOY-MULTI`
+        - **Deployment Group:** `Production`
+   - Click **Create Pipeline**.
 
 ### **Step 8: Deployment Process**
 1. **Push code** to `testing`.
@@ -96,68 +142,6 @@ This project sets up a complete **CI/CD pipeline** for a **Node.js application a
 3. **Manual approval required** before production.
 4. **CodePipeline deploys** to production.
 5. **GitHub Workflow auto-merges** changes.
-
----
-## **Project Structure**
-```
-├── src/
-│   ├── index.js  # Node.js App Entry Point
-├── deploy/
-│   ├── appspec.yml  # AWS CodeDeploy Config
-│   ├── scripts/
-│       ├── start.sh  # Startup Script
-│       ├── stop.sh   # Stop Script
-├── .github/workflows/deploy.yml  # GitHub Actions Workflow
-├── package.json  # Node.js Dependencies
-├── README.md  # Project Documentation
-```
-
----
-## **GitHub Actions Workflow (`.github/workflows/deploy.yml`)**
-```yaml
-name: Deploy to AWS
-on:
-  push:
-    branches:
-      - testing
-      - production
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Deploy to AWS CodeDeploy
-        run: |
-          aws deploy create-deployment --application-name MyApp --deployment-group-name ${{ github.ref_name }} --s3-location bucket=my-artifacts-bucket,key=latest.zip,bundleType=zip
-```
-
----
-## **Deployment Guide**
-1. **Commit & push code** to `testing`.
-2. **CodePipeline deploys** to testing.
-3. **Manual approval required** before production.
-4. **CodePipeline deploys** to production.
-5. **GitHub Workflow auto-merges** changes.
-
----
-## **Troubleshooting & FAQs**
-
-### **1. CodeDeploy Fails?**
-- Check IAM role permissions.
-- Verify `appspec.yml` configuration.
-
-### **2. Pipeline Stuck at Manual Approval?**
-- Approve manually in AWS CodePipeline.
-
-### **3. EC2 Instance Not Updating?**
-- Restart EC2: `sudo reboot`.
-- Check logs: `tail -f /var/log/codedeploy-agent.log`.
-
----
-## **Contributors & License**
-- **Author:** Nirmal Padvi
-- **License:** MIT License
 
 ---
 ## **Conclusion**
