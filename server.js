@@ -5,7 +5,7 @@ const PORT = 8080;
 const HOST = "0.0.0.0"; // Ensure this is set
 
 app.get("/", (req, res) => {
-  res.send("Hello, Nirmal to the CICD!");
+  res.send("Hello, !");
 });
 
 app.listen(PORT, HOST, () => {
