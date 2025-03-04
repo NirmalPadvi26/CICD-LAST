@@ -18,3 +18,6 @@ hooks:
     - location: scripts/start.sh
       timeout: 300
       runas: ec2-user
+    - location: scripts/send-ses.sh
+      timeout: 60
+      runas: ec2-user
