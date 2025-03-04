@@ -5,8 +5,8 @@
 if [[ "$BUILD_STATUS" != "SUCCESS" ]]; then
     echo "Build failed. Sending failure email..."
     aws ses send-email \
-      --from "abrahmakshatriya04@gmail.com" \
-      --destination "ToAddresses=aangibrahmakshatriya@gmail.com" \
+      --from "nirmalp2632@gmail@gmail.com" \
+      --destination "ToAddresses=nirmalp2632@gmail@gmail.com" \
       --message "Subject={Data='Deployment Failed'},Body={Text={Data='The build or deployment has failed. Please check the logs for details.'}}"
     exit 0
 fi
