@@ -12,16 +12,9 @@ permissions:
     mode: 755
     owner: ec2-user
     group: ec2-user
-  - object: /home/ec2-user/app/scripts/send-ses.sh  # Ensure send-ses.sh is executable
-    mode: 755
-    owner: ec2-user
-    group: ec2-user
 
 hooks:
   ApplicationStart:
     - location: scripts/start.sh
       timeout: 300
-      runas: ec2-user
-    - location: scripts/send-ses.sh
-      timeout: 60
       runas: ec2-user
