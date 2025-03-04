@@ -5,7 +5,7 @@ const PORT = 8080;
 const HOST = "0.0.0.0"; // Ensure this is set
 
 app.get("/", (req, res) => {
-  res.send("Hello, Today we are gonna add Email and monitoring!");
+  res.send("Hello, Today Email done!");
 });
 
 app.listen(PORT, HOST, () => {
