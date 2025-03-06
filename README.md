@@ -1,59 +1,100 @@
-# **AWS CI/CD Pipeline with GitHub and CodeDeploy**
+# AWS CI/CD Pipeline with GitHub and CodeDeploy
 
-## **Overview**
-This project sets up a complete **CI/CD pipeline** for a **Node.js application and an HTML website** using **AWS EC2, CodeDeploy, CodePipeline, S3, and GitHub**. The pipeline follows a **multi-branch deployment strategy** (`main`, `testing`, `production`) with **manual approvals** before production releases.
+## Project Overview
+This project sets up a complete CI/CD pipeline for a simple Node.js application and an HTML website using AWS CodeDeploy, CodePipeline, S3, and GitHub. The deployment process follows a multi-branch strategy (`main`, `testing`, `production`), ensuring controlled releases with manual approvals before production deployment.
 
----
-## **Project Architecture**
+## System Requirements
+- AWS Free Tier Account
+- GitHub Account and Git installed
+- Node.js Installed (for local development)
+- AWS CLI Installed & Configured
+- VS Code (IDE)
 
-### **Components:**
-- **EC2 Instances (Linux, Free Tier)**: Hosts the application.
-- **Security Group**: Allows traffic on **ports 80, 443, 3000, and 8080**.
-- **GitHub Repository**: Stores project code with branch-based deployment.
-- **S3 Bucket**: Stores deployment artifacts.
-- **IAM Roles**: Grants permissions for EC2 and CodeDeploy.
-- **AWS CodeDeploy**: Handles deployments.
-- **AWS CodePipeline**: Automates deployment workflows.
-- **GitHub Workflow**: Auto-merges changes post-deployment.
+## Setup and Configuration
 
----
-## **Prerequisites**
-- **AWS Free Tier Account**
-- **GitHub Account**
-- **Node.js & NPM Installed**
-- **Git Installed**
-- **AWS CLI Installed & Configured**
-- **VS Code (or any IDE)**
+### Step 1: Create a GitHub Repository
+1. Create a new repository named `CICD-LAST`.
+2. Do not initialize it with a README, license, or `.gitignore`.
+3. Clone the repository locally and initialize a Node.js project:
+   ```sh
+   cd /path/to/your/project/folder
+   npm init -y
+   npm install express
+   ```
+4. Create `app.js`:
+   ```js
+   const express = require("express");
+   const app = express();
+   const PORT = 8080;
+   const HOST = "0.0.0.0";
+   
+   app.get("/", (req, res) => {
+     res.send("Hello, Toshal Infotech AWS TEAM!!!");
+   });
+   
+   app.listen(PORT, HOST, () => {
+     console.log(`Server running on http://${HOST}:${PORT}`);
+   });
+   ```
+5. Push to GitHub:
+   ```sh
+   git init
+   git remote add origin https://github.com/your-username/CICD-LAST.git
+   git add .
+   git commit -m "Initial commit with simple Node.js app"
+   git push -u origin main
+   ```
+6. Create branches: `testing`, `production`.
 
----
-## **Setup & Configuration**
+### Step 2: Configure GitHub Authentication Token
+1. Generate a **Personal Access Token (PAT)** in GitHub with `Content: Read & Write`, `Workflows: Read & Write`, and `Metadata: Read Only` permissions.
+2. Add this token as a **GitHub Secret** with the key `GH_PAT`.
 
-### **Step 1: Create EC2 Instances**
-1. **Launch Two Amazon Linux 2023 EC2 Instances (Free Tier).**
-2. **Instance Configuration:**
-   - **AMI:** Amazon Linux 2023 (64-bit x86)
-   - **Instance Type:** `t2.micro`
-   - **Key Pair:** Create a new key pair **“test&prod.pem”**.
-   - **VPC:** Default VPC
-   - **Storage:** EBS 10 GiB General Purpose SSD (gp3)
+### Step 3: Auto-Merge Workflow (GitHub Actions)
+Create `.github/workflows/auto-merge.yml`:
+```yaml
+on:
+  push:
+    branches:
+      - testing
+  workflow_dispatch:
 
-3. **Configure Security Group:**
-   - **Inbound Rules:**
-     - HTTP (80) → Anywhere (0.0.0.0/0, ::/0)
-     - HTTPS (443) → Anywhere (0.0.0.0/0, ::/0)
-     - TCP (3000, 8080) → Anywhere (0.0.0.0/0, ::/0)
-     - SSH (22) → Anywhere (0.0.0.0/0, ::/0)
-   - **Outbound Rules:**
-     - Allow all traffic (0.0.0.0/0, ::/0).
+jobs:
+  merge-to-production:
+    runs-on: ubuntu-latest
 
-4. **Install Dependencies on EC2:**
-   ```bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "Nirmalp2632@gmail.com"
+          git config --global user.name "GitHub Actions Bot"
+
+      - name: Merge Testing into Production
+        run: |
+          git checkout production
+          git merge origin/testing --no-edit
+          git push origin production
+```
+
+### Step 4: EC2 Setup
+1. Create two EC2 instances (`Testing` & `Production`):
+   - **Type:** `t2.micro`
+   - **AMI:** Amazon Linux 2023
+   - **Security Group:** Open ports 80, 443, 8080, and 22.
+2. Install dependencies on EC2:
+   ```sh
    sudo yum update -y
    sudo yum install -y git unzip nodejs npm aws-cli
+   sudo npm install -g pm2
    ```
-
-5. **Install CodeDeploy Agent:**
-   ```bash
+3. Install CodeDeploy Agent:
+   ```sh
    sudo yum install ruby -y
    cd /home/ec2-user
    wget https://aws-codedeploy-ap-south-1.s3.amazonaws.com/latest/install
@@ -63,87 +104,55 @@ This project sets up a complete **CI/CD pipeline** for a **Node.js application a
    sudo systemctl start codedeploy-agent
    ```
 
-### **Step 2: Setup GitHub Repository**
-1. **Create a new GitHub repository.**
-2. **Push a simple Node.js website.**
-3. **Create branches:** `main`, `testing`, `production`.
+### Step 5: IAM Roles
+1. **IAM Role for EC2**:
+   - Attach policies: `AmazonS3ReadOnlyAccess`, `CodeDeployFullAccess`, `AmazonEC2FullAccess`, `AmazonCodePipeline`.
+   - Assign to both EC2 instances.
+2. **IAM Role for CodeDeploy**:
+   - Attach policies: `AmazonS3FullAccess`, `CodeDeployFullAccess`, `IAMPassRole`, `AmazonEC2FullAccess`.
+   - Assign to CodeDeploy.
 
-### **Step 3: Generate GitHub Token**
-1. **Generate a Personal Access Token** with permissions:
-   - **Content:** Read & Write
-   - **Workflows:** Read & Write
-   - **Metadata:** Read Only
-2. **Store the Token in GitHub Secrets:**
-   - **Key:** `GT_TAH`
-   - **Value:** (Paste Token)
+### Step 6: Setup CodeDeploy
+1. **Create a CodeDeploy Application**:
+   - Name: `CICD-DEPLOY-MULTI`
+   - Compute Platform: `EC2/On-Premises`
+2. **Create Deployment Groups**:
+   - **Testing Deployment Group**:
+     - Application: `CICD-DEPLOY-MULTI`
+     - EC2 Instance: Select Testing EC2 Instance
+   - **Production Deployment Group**:
+     - EC2 Instance: Select Production EC2 Instance
 
-### **Step 4: Create S3 for Artifacts**
-1. **Go to AWS S3 Console** and create a new S3 bucket.
-2. **Enable public access block** (recommended).
-3. **Add a bucket policy** to allow access from AWS CodeDeploy.
-4. **Update permissions** to allow CodeDeploy to access the bucket.
+### Step 7: Configure CodePipeline
+1. **Create a CodePipeline**:
+   - Name: `Multi-Branch-Pipeline`
+   - Service Role: `AWSCodePipelineServiceRole`
+   - **Stages**:
+     - **Source**: GitHub (`main` branch)
+     - **Deploy to Testing**: AWS CodeDeploy (Testing Group)
+     - **Manual Approval**: Required before production deployment
+     - **Deploy to Production**: AWS CodeDeploy (Production Group)
 
-### **Step 5: Create IAM Roles**
-1. **IAM Role for EC2:**
-   - Attach `AmazonS3ReadOnlyAccess`, `CodeDeployFullAccess`.
-2. **IAM Role for CodeDeploy:**
-   - Attach `AmazonS3FullAccess`, `CodeDeployFullAccess`, `IAMPassRole`.
+### Step 8: Configure SNS for Deployment Notifications
+1. **Create an SNS Topic**:
+   - Name: `DeploymentNotifications`
+   - Add email subscription: `nirmalp2632@gmail.com`
+2. **Attach SNS to CodeDeploy**:
+   - Go to AWS CodeDeploy > Select Testing Deployment Group
+   - Under **Triggers**, add SNS Topic `DeploymentNotifications`
+   - Configure for deployment success & failure.
 
-### **Step 6: Setup CodeDeploy**
-1. **Create a CodeDeploy Application:**
-   - Open the AWS CodeDeploy console.
-   - Click **Create application**.
-   - **Application Name:** `CICD-DEPLOY-MULTI`
-   - **Compute Platform:** `EC2/On-Premises`
-   - Click **Create application**.
+## Conclusion
+- Successfully integrates GitHub, AWS CodeDeploy, and AWS CodePipeline.
+- Implements a **multi-branch** deployment strategy for structured releases.
+- Uses **manual approvals** for controlled production deployments.
+- Sends **SNS notifications** for deployment status updates.
 
-2. **Create Deployment Groups:**
-   - **Testing Deployment Group:**
-     - Click **Create deployment group**.
-     - **Deployment Group Name:** `Testing`
-     - **Application Name:** `CICD-DEPLOY-MULTI`
-     - **IAM Role:** `CodeDeployCustomRole`
-     - **Deployment Type:** `In-Place Deployment`
-     - **EC2 Instance:** Select **Testing EC2 Instance**
-     - Click **Create deployment group**.
-   
-   - **Production Deployment Group:**
-     - **Deployment Group Name:** `Production`
-     - **EC2 Instance:** Select **Production EC2 Instance**
-     - **Deployment Config:** `CodeDeployDefault.OneAtATime`
-     - Click **Create deployment group**.
-
-### **Step 7: Configure CodePipeline**
-1. **Create a Custom CodePipeline:**
-   - **Pipeline Name:** `Multi-Branch-Pipeline`
-   - **Service Role:** `AWSCodePipelineServiceRole`
-   - **S3 Bucket for Artifacts:** Select the previously created bucket.
-   - **Add Stages:**
-     1. **Source Stage:**
-        - **Source Provider:** GitHub
-        - **Repository:** Your project repository
-        - **Branch:** `main`
-        - **Output Artifact:** `SourceArtifact`
-     2. **Deploy to Testing:**
-        - **Provider:** AWS CodeDeploy
-        - **Application Name:** `CICD-DEPLOY-MULTI`
-        - **Deployment Group:** `Testing`
-     3. **Manual Approval:**
-        - **Approval Action:** Requires manual confirmation before production.
-     4. **Deploy to Production:**
-        - **Provider:** AWS CodeDeploy
-        - **Application Name:** `CICD-DEPLOY-MULTI`
-        - **Deployment Group:** `Production`
-   - Click **Create Pipeline**.
-
-### **Step 8: Deployment Process**
-1. **Push code** to `testing`.
-2. **CodePipeline triggers deployment** to testing.
-3. **Manual approval required** before production.
-4. **CodePipeline deploys** to production.
-5. **GitHub Workflow auto-merges** changes.
+## Summary
+- A **Node.js** app is deployed on AWS EC2.
+- **AWS CodePipeline** automates deployment from GitHub.
+- **Manual approvals** ensure controlled production releases.
+- **SNS notifications** provide real-time updates.
 
 ---
-## **Conclusion**
-This project successfully implements a **CI/CD pipeline using AWS CodeDeploy, EC2, and GitHub** for automated deployments. 🚀
-
+This README serves as a complete guide to setting up an AWS CI/CD pipeline with GitHub and CodeDeploy.
