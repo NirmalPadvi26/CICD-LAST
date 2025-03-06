@@ -1,7 +1,7 @@
 # AWS CI/CD Pipeline with GitHub and CodeDeploy
 
 ## Project Overview
-This project sets up a complete CI/CD pipeline for a simple Node.js application and an HTML website using AWS CodeDeploy, CodePipeline, S3, and GitHub. The deployment process follows a multi-branch strategy (`main`, `testing`, `production`), ensuring controlled releases with manual approvals before production deployment.
+This project sets up a complete CI/CD pipeline for a simple Node.js application using AWS CodeDeploy, CodePipeline, S3, and GitHub. The deployment process follows a multi-branch strategy (`main`, `testing`, `production`), ensuring controlled releases with manual approvals before production deployment.
 
 ## System Requirements
 - AWS Free Tier Account
