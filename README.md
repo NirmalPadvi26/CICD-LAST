@@ -141,7 +141,27 @@ jobs:
    - Go to AWS CodeDeploy > Select Testing Deployment Group
    - Under **Triggers**, add SNS Topic `DeploymentNotifications`
    - Configure for deployment success & failure.
-
+     
+### Step 9: Configure EC2 Instance Monitoring with Grafana, Prometheus, Loki, and Promtail
+1. Install CodeDeploy Agent:
+   ```sh
+   wget https://github.com/prometheus/prometheus/releases/latest/download/prometheus-linux-amd64.tar.gz
+   ```
+2. Extract and move it:
+   ```sh
+   tar -xvzf prometheus-linux-amd64.tar.gz
+   sudo mv prometheus-linux-amd64 /usr/local/bin/prometheus
+   ```
+3. Create Prometheus configuration file at /etc/prometheus/prometheus.yml:
+   ```sh
+   global:
+     scrape_interval: 15s
+   
+   scrape_configs:
+     - job_name: 'node_exporter'
+       static_configs:
+         - targets: ['localhost:9100']
+    ```
 ## Conclusion
 - Successfully integrates GitHub, AWS CodeDeploy, and AWS CodePipeline.
 - Implements a **multi-branch** deployment strategy for structured releases.
